@@ -46,10 +46,8 @@ The build is a static site with no backend. Both APIs allow browser requests, so
 The live site is deployed from the built files with the Vercel CLI. To redeploy after a change:
 
 ```bash
-npm run build && cd dist && vercel deploy --prod --yes
+npm run build && cd dist && vercel link --yes --project remessa && vercel deploy --prod --yes
 ```
-
-(The first `vercel deploy` from `dist/` asks to link it to the existing `remessa` project.)
 
 ## Design decisions
 
