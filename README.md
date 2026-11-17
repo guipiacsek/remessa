@@ -2,6 +2,8 @@
 
 **What does it really cost to send money between the U.S. and Brazil?**
 
+**Live: [remessa-smoky.vercel.app](https://remessa-smoky.vercel.app)**
+
 Most transfer services advertise a low fee and hide the rest in the exchange rate. Remessa compares what the recipient actually gets against the **mid-market rate** (the real rate, with no margin) and shows the difference as the *hidden cost*, in both directions, in English or Portuguese.
 
 ![Remessa comparing Inter&Co, Wise and a U.S. bank wire for USD 1,000 sent to Brazil](docs/app.png)
@@ -40,6 +42,14 @@ npm run build    # static site in dist/
 ```
 
 The build is a static site with no backend. Both APIs allow browser requests, so it deploys as-is to Vercel, Netlify or GitHub Pages.
+
+The live site is deployed from the built files with the Vercel CLI. To redeploy after a change:
+
+```bash
+npm run build && cd dist && vercel deploy --prod --yes
+```
+
+(The first `vercel deploy` from `dist/` asks to link it to the existing `remessa` project.)
 
 ## Design decisions
 
