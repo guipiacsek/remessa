@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Point } from './api'
-import { t, type Lang } from './i18n'
+import { t, num, type Lang } from './i18n'
 
 const W = 640
 const H = 220
@@ -44,7 +44,7 @@ export function RateChart({ points, lang }: { points: Point[]; lang: Lang }) {
             <g key={r}>
               <line className="grid" x1={PAD.left} x2={W - PAD.right} y1={y(r)} y2={y(r)} />
               <text className="axis" x={PAD.left - 6} y={y(r) + 4} textAnchor="end">
-                {r.toFixed(2)}
+                {num(r, 2, lang)}
               </text>
             </g>
           ))}
@@ -73,8 +73,15 @@ export function RateChart({ points, lang }: { points: Point[]; lang: Lang }) {
           />
         </svg>
         {h && hover !== null && (
-          <div className="tooltip" style={{ left: `${(x(hover) / W) * 100}%` }}>
-            <strong>{h.rate.toFixed(4)}</strong>
+          <div
+            className="tooltip"
+            style={{
+              left: `${(x(hover) / W) * 100}%`,
+              // Anchor to the point's side near the edges so the tooltip never leaves the chart.
+              transform: `translateX(${hover < points.length * 0.2 ? '0' : hover > points.length * 0.8 ? '-100%' : '-50%'})`,
+            }}
+          >
+            <strong>{num(h.rate, 4, lang)}</strong>
             <span>{fmtDate(h.date)}</span>
           </div>
         )}
@@ -92,7 +99,7 @@ export function RateChart({ points, lang }: { points: Point[]; lang: Lang }) {
             {[...points].reverse().map((p) => (
               <tr key={p.date}>
                 <td>{p.date}</td>
-                <td>{p.rate.toFixed(4)}</td>
+                <td>{num(p.rate, 4, lang)}</td>
               </tr>
             ))}
           </tbody>

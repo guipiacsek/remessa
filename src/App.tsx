@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usdBrlHistory, wiseReceived, type Point } from './api'
-import { t, money, type Lang } from './i18n'
+import { t, money, num, pct, type Lang } from './i18n'
 import { providers, type Direction } from './providers'
 import { quoteFromPricing, quoteFromReceived, rateFor, type Quote } from './quote'
 import { RateChart } from './RateChart'
@@ -14,6 +14,7 @@ interface Row {
   note?: string
   source?: string
   checked?: string
+  retry?: boolean
 }
 
 export default function App() {
@@ -22,8 +23,11 @@ export default function App() {
   const [amount, setAmount] = useState(1000)
   const [history, setHistory] = useState<Point[]>([])
   const [wise, setWise] = useState<number | null>(null)
+  const [wiseStatus, setWiseStatus] = useState<'loading' | 'ok' | 'error'>('loading')
+  const [wiseTry, setWiseTry] = useState(0)
   const [custom, setCustom] = useState<Record<string, number>>({})
   const [editing, setEditing] = useState<string | null>(null)
+  const [quoteError, setQuoteError] = useState(false)
   const [error, setError] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const s = t[lang]
@@ -45,18 +49,22 @@ export default function App() {
   // Debounced so typing an amount doesn't fire a request per keystroke.
   useEffect(() => {
     setWise(null)
+    setWiseStatus('loading')
     if (!(amount > 0)) return
     const ctl = new AbortController()
     const id = setTimeout(() => {
       wiseReceived(amount, direction, ctl.signal)
-        .then((q) => setWise(q?.received ?? null))
-        .catch(() => setWise(null))
+        .then((q) => {
+          setWise(q?.received ?? null)
+          setWiseStatus(q ? 'ok' : 'error')
+        })
+        .catch((e) => e.name !== 'AbortError' && setWiseStatus('error'))
     }, 400)
     return () => {
       clearTimeout(id)
       ctl.abort()
     }
-  }, [amount, direction, attempt])
+  }, [amount, direction, attempt, wiseTry])
 
   // A quote for a different amount or direction no longer applies.
   useEffect(() => setCustom({}), [amount, direction])
@@ -76,6 +84,8 @@ export default function App() {
           name: p.name,
           badge: 'live',
           quote: wise === null ? null : quoteFromReceived(amount, wise, mid),
+          note: wiseStatus === 'loading' ? s.wiseLoading : wiseStatus === 'error' ? s.wiseError : undefined,
+          retry: wiseStatus === 'error',
         }
       const pricing = p.pricing[direction]
       if (!pricing) return { id: p.id, name: p.name, badge: 'estimate', quote: null, note: s.notOffered }
@@ -90,7 +100,7 @@ export default function App() {
       }
     })
     return out.sort((a, b) => (b.quote?.received ?? -1) - (a.quote?.received ?? -1))
-  }, [usdBrl, mid, amount, direction, wise, custom, lang, s.notOffered])
+  }, [usdBrl, mid, amount, direction, wise, wiseStatus, custom, lang, s])
 
   const bestId = rows.find((r) => r.quote)?.id
 
@@ -101,7 +111,7 @@ export default function App() {
           <h1>{s.title}</h1>
           <p className="muted">{s.tagline}</p>
         </div>
-        <div className="segmented lang" role="group" aria-label="Language">
+        <div className="segmented lang" role="group" aria-label={s.language}>
           {(['en', 'pt'] as Lang[]).map((l) => (
             <button key={l} aria-pressed={lang === l} onClick={() => setLang(l)}>
               {l.toUpperCase()}
@@ -138,7 +148,7 @@ export default function App() {
           <div className="field mid">
             <span className="muted">{s.midRate}</span>
             <strong>
-              1 {from} = {mid.toFixed(4)} {to}
+              1 {from} = {num(mid, 4, lang)} {to}
             </strong>
             <span className="muted small">{s.midNote}</span>
           </div>
@@ -173,6 +183,11 @@ export default function App() {
                     {r.id === bestId && <span className="badge best">{s.best}</span>}
                   </div>
                   {r.note && <p className="note">{r.note}</p>}
+                  {r.retry && (
+                    <button className="link row-retry" onClick={() => setWiseTry((n) => n + 1)}>
+                      {s.retry}
+                    </button>
+                  )}
                   {r.source && (
                     <p className="note">
                       <a href={r.source} target="_blank" rel="noreferrer">
@@ -186,18 +201,39 @@ export default function App() {
                       className="quote-form"
                       onSubmit={(e) => {
                         e.preventDefault()
-                        const n = Number(new FormData(e.currentTarget).get('received'))
-                        if (n > 0) setCustom((c) => ({ ...c, [r.id]: n }))
+                        const input = e.currentTarget.elements.namedItem('received') as HTMLInputElement
+                        const n = Number(input.value)
+                        if (!(n > 0)) {
+                          setQuoteError(true)
+                          input.focus()
+                          return
+                        }
+                        setCustom((c) => ({ ...c, [r.id]: n }))
                         setEditing(null)
                       }}
                     >
-                      <label>
-                        <span className="muted small">
-                          {s.quotePrompt} ({to})
-                        </span>
-                        <input name="received" type="number" step="0.01" min={0} autoFocus />
-                      </label>
-                      <button type="submit">OK</button>
+                      <div className="quote-form-row">
+                        <label>
+                          <span className="muted small">
+                            {s.quotePrompt} ({to})
+                          </span>
+                          <input
+                            name="received"
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            autoFocus
+                            aria-invalid={quoteError}
+                            aria-describedby={quoteError ? `quote-error-${r.id}` : undefined}
+                          />
+                        </label>
+                        <button type="submit">{s.compareQuote}</button>
+                      </div>
+                      {quoteError && (
+                        <p className="field-error" id={`quote-error-${r.id}`}>
+                          {s.quoteInvalid}
+                        </p>
+                      )}
                     </form>
                   ) : r.badge === 'custom' ? (
                     <button
@@ -210,12 +246,18 @@ export default function App() {
                         })
                       }
                     >
-                      {s.clear}
+                      {s.removeQuote}
                     </button>
                   ) : (
                     r.quote !== null && (
-                      <button className="link" onClick={() => setEditing(r.id)}>
-                        {s.haveQuote}
+                      <button
+                        className="link"
+                        onClick={() => {
+                          setQuoteError(false)
+                          setEditing(r.id)
+                        }}
+                      >
+                        {s.enterQuote}
                       </button>
                     )
                   )}
@@ -227,7 +269,7 @@ export default function App() {
                   {r.quote ? (
                     <>
                       {money(r.quote.cost, to, lang)}
-                      <span className="muted small"> ({r.quote.costPct.toFixed(2)}%)</span>
+                      <span className="muted small"> ({pct(r.quote.costPct, lang)})</span>
                     </>
                   ) : (
                     '—'
@@ -244,7 +286,7 @@ export default function App() {
       <footer className="muted small">
         <p>{s.disclaimer}</p>
         <p>
-          Data: <a href="https://frankfurter.dev">Frankfurter</a> (ECB) ·{' '}
+          {s.data}: <a href="https://frankfurter.dev">Frankfurter</a> (ECB) ·{' '}
           <a href="https://wise.com/us/compare/">Wise comparison API</a> ·{' '}
           <a href="https://github.com/guipiacsek/remessa">GitHub</a>
         </p>

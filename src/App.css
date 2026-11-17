@@ -3,7 +3,8 @@
   color-scheme: light;
   --surface: #ffffff;
   --surface-2: #f4f6fa;
-  --border: #dde3ec;
+  --border: #dde3ec; /* dividers */
+  --border-control: #7c8799; /* control edges: 3.6:1 on white, 3.4:1 on surface-2 */
   --text: #0b1220;
   --text-2: #4a5568;
   --accent: #1e3a8a; /* dark blue: selected controls, "cheapest" badge */
@@ -59,18 +60,27 @@ button {
 }
 .segmented {
   display: inline-flex;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: 8px;
-  overflow: hidden;
 }
+/* Rounded end buttons instead of overflow: hidden, which would clip the focus ring. */
 .segmented button {
   border: 0;
   background: transparent;
   color: var(--text);
   padding: 8px 14px;
 }
+.segmented button:first-child {
+  border-radius: 7px 0 0 7px;
+}
+.segmented button:last-child {
+  border-radius: 0 7px 7px 0;
+}
 .segmented button + button {
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--border-control);
+}
+.segmented button:focus-visible {
+  outline-offset: 2px;
 }
 .segmented button[aria-pressed='true'] {
   background: var(--accent);
@@ -105,7 +115,7 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: 8px;
   padding: 0 12px;
   background: var(--surface-2);
@@ -115,8 +125,11 @@ button {
   border: 0;
   background: transparent;
   color: var(--text);
-  font: 600 22px/1 inherit;
   font-family: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
   padding: 8px 0;
 }
 .amount input:focus {
@@ -197,10 +210,13 @@ button {
   font-size: 13px;
 }
 .quote-form {
+  margin-top: 8px;
+}
+.quote-form-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 8px;
-  margin-top: 8px;
 }
 .quote-form label {
   display: flex;
@@ -209,18 +225,29 @@ button {
 .quote-form input {
   width: 12ch;
   padding: 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: 6px;
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
 }
+.quote-form input[aria-invalid='true'] {
+  border-color: var(--warn);
+}
 .quote-form button {
   padding: 6px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: 6px;
   background: var(--surface-2);
   color: var(--text);
+}
+.field-error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--warn);
+}
+.row-retry {
+  margin-top: 6px;
 }
 .error button {
   margin-left: 8px;
@@ -271,11 +298,13 @@ button {
 .tooltip {
   position: absolute;
   top: 0;
-  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid transparent; /* keeps an edge in forced-colors mode, which drops shadows */
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 4px 12px rgb(0 0 0 / 0.08);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 13px;

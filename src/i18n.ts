@@ -20,9 +20,15 @@ export const t = {
     custom: 'Your quote',
     source: 'source',
     checked: 'checked',
-    haveQuote: 'I have a quote',
+    enterQuote: 'Enter my quote',
     quotePrompt: 'Amount the recipient would get',
-    clear: 'Clear',
+    compareQuote: 'Compare quote',
+    removeQuote: 'Remove my quote',
+    quoteInvalid: 'Enter the amount the recipient would get, above 0.',
+    wiseLoading: 'Getting Wise’s live quote…',
+    wiseError: 'Couldn’t get Wise’s live quote.',
+    language: 'Language',
+    data: 'Data',
     notOffered: 'Not offered in this direction',
     loading: 'Loading…',
     error: 'Could not load live data. Check your connection and try again.',
@@ -54,9 +60,15 @@ export const t = {
     custom: 'Sua cotação',
     source: 'fonte',
     checked: 'verificado em',
-    haveQuote: 'Tenho uma cotação',
+    enterQuote: 'Inserir minha cotação',
     quotePrompt: 'Valor que o destinatário receberia',
-    clear: 'Limpar',
+    compareQuote: 'Comparar cotação',
+    removeQuote: 'Remover minha cotação',
+    quoteInvalid: 'Informe o valor que o destinatário receberia, acima de 0.',
+    wiseLoading: 'Buscando a cotação ao vivo da Wise…',
+    wiseError: 'Não foi possível buscar a cotação ao vivo da Wise.',
+    language: 'Idioma',
+    data: 'Dados',
     notOffered: 'Não disponível nesta direção',
     loading: 'Carregando…',
     error: 'Não foi possível carregar os dados ao vivo. Verifique sua conexão e tente de novo.',
@@ -71,6 +83,18 @@ export const t = {
   },
 } satisfies Record<Lang, Record<string, string>>
 
+const locale = (lang: Lang) => (lang === 'pt' ? 'pt-BR' : 'en-US')
+
 export function money(n: number, currency: 'USD' | 'BRL', lang: Lang) {
-  return new Intl.NumberFormat(lang === 'pt' ? 'pt-BR' : 'en-US', { style: 'currency', currency }).format(n)
+  return new Intl.NumberFormat(locale(lang), { style: 'currency', currency }).format(n)
+}
+
+/** A plain number with a fixed count of decimals, in the reader's locale (5.7821 / 5,7821). */
+export function num(n: number, digits: number, lang: Lang) {
+  return new Intl.NumberFormat(locale(lang), { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n)
+}
+
+/** A percentage given as 0–100 (4.51% / 4,51%). */
+export function pct(n: number, lang: Lang) {
+  return new Intl.NumberFormat(locale(lang), { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n / 100)
 }
